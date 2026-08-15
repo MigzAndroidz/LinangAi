@@ -46,6 +46,34 @@ export const AnalyticsModal = ({
     return Object.fromEntries(COGNITIVE_SKILLS.map((s) => [s.id, s]));
   }, []);
 
+  // Combine Growth Areas and Friction Points with distinction tags
+  const combinedGrowthAndFriction = useMemo(() => {
+    const map = new Map();
+
+    insights.growthAreas.forEach((item) => {
+      map.set(item.skill, {
+        ...item,
+        isGrowth: true,
+        isFriction: false
+      });
+    });
+
+    insights.frictionPoints.forEach((item) => {
+      if (map.has(item.skill)) {
+        const existing = map.get(item.skill);
+        existing.isFriction = true;
+      } else {
+        map.set(item.skill, {
+          ...item,
+          isGrowth: false,
+          isFriction: true
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [insights]);
+
   // ─── Fetch Forecast Data ───────────────────────────────────────────────────
   const [dailySnapshots, setDailySnapshots] = useState([]);
 
@@ -148,34 +176,6 @@ export const AnalyticsModal = ({
       icon: '⚡'
     }
   ];
-
-  // Combine Growth Areas and Friction Points with distinction tags
-  const combinedGrowthAndFriction = useMemo(() => {
-    const map = new Map();
-
-    insights.growthAreas.forEach((item) => {
-      map.set(item.skill, {
-        ...item,
-        isGrowth: true,
-        isFriction: false
-      });
-    });
-
-    insights.frictionPoints.forEach((item) => {
-      if (map.has(item.skill)) {
-        const existing = map.get(item.skill);
-        existing.isFriction = true;
-      } else {
-        map.set(item.skill, {
-          ...item,
-          isGrowth: false,
-          isFriction: true
-        });
-      }
-    });
-
-    return Array.from(map.values());
-  }, [insights]);
 
   return (
     <div className="modal-backdrop" onClick={onClose}>

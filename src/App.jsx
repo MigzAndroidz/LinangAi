@@ -541,6 +541,7 @@ export function App() {
         userStats={userStats}
         assignments={assignments}
         courses={courses}
+        currentProfile={currentProfile}
       />
 
       <SettingsModal

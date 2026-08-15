@@ -18,6 +18,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { Avatar } from './Avatar';
 
 export const Header = ({
   currentProfile,
@@ -99,7 +100,7 @@ export const Header = ({
             </div>
             <div>
               <div className="brand-title">
-                Linang<span>.ai</span>
+                LinangAI
               </div>
               <div className="brand-subtitle">
                 Your Academic Companion
@@ -117,16 +118,11 @@ export const Header = ({
                 style={{ padding: '0.35rem 0.65rem', borderRadius: 'var(--radius-full)', gap: '0.45rem' }}
                 title="Switch user account or edit profile"
               >
-                <span
-                  style={{
-                    width: '22px', height: '22px', borderRadius: '50%',
-                    backgroundColor: currentProfile?.color || '#2563eb',
-                    color: 'white', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '0.75rem', flexShrink: 0
-                  }}
-                >
-                  {currentProfile?.avatar || '🦉'}
-                </span>
+                <Avatar
+                  avatar={currentProfile?.avatar || '🦉'}
+                  size={22}
+                  backgroundColor={currentProfile?.color || '#2563eb'}
+                />
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {currentProfile?.name}
                 </span>
@@ -216,16 +212,13 @@ export const Header = ({
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="btn btn-subtle"
                 style={{ padding: '0.3rem 0.5rem', borderRadius: 'var(--radius-full)', gap: '0.35rem' }}
+                aria-label="Profile menu"
               >
-                <span
-                  style={{
-                    width: '26px', height: '26px', borderRadius: '50%',
-                    backgroundColor: currentProfile?.color || '#2563eb',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem'
-                  }}
-                >
-                  {currentProfile?.avatar || '🦉'}
-                </span>
+                <Avatar
+                  avatar={currentProfile?.avatar || '🦉'}
+                  size={26}
+                  backgroundColor={currentProfile?.color || '#2563eb'}
+                />
                 <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
               </button>
 
@@ -394,8 +387,8 @@ function ProfileDropdown({ profiles, currentProfile, onSwitchProfile, onViewChan
               color: isCur ? 'var(--accent-primary)' : 'var(--text-primary)'
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-              <span>{p.avatar}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Avatar avatar={p.avatar} size={22} backgroundColor={p.color || '#2563eb'} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '140px' }}>{p.name}</span>
             </div>
             {isCur && <CheckCircle2 size={13} />}

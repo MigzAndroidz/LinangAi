@@ -102,7 +102,7 @@ export const CourseManagerModal = ({
             </div>
             <h3>Manage Subjects & Courses</h3>
           </div>
-          <button onClick={onClose} className="btn btn-icon" style={{ width: '32px', height: '32px' }}>
+          <button onClick={onClose} className="btn btn-icon" style={{ width: '36px', height: '36px' }} aria-label="Close">
             <X size={16} />
           </button>
         </div>
@@ -126,20 +126,23 @@ export const CourseManagerModal = ({
 
                 <div className="form-group">
                   <label className="form-label">Color Theme</label>
-                  <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                  <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
                     {colorPalette.map((c) => (
-                      <div
+                      <button
                         key={c}
+                        type="button"
                         onClick={() => setColor(c)}
                         style={{
-                          width: '26px',
-                          height: '26px',
+                          width: '28px',
+                          height: '28px',
                           borderRadius: '50%',
                           backgroundColor: c,
                           cursor: 'pointer',
                           border: color === c ? '2px solid white' : '2px solid transparent',
-                          boxShadow: color === c ? '0 0 0 2px var(--accent-primary)' : 'none'
+                          boxShadow: color === c ? '0 0 0 2px var(--accent-primary)' : 'none',
+                          padding: 0
                         }}
+                        aria-label={`Color ${c}`}
                       />
                     ))}
                   </div>
@@ -239,22 +242,24 @@ export const CourseManagerModal = ({
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       <button
                         onClick={() => handleStartEdit(course)}
                         className="btn btn-icon"
-                        style={{ width: '30px', height: '30px' }}
+                        style={{ width: '34px', height: '34px' }}
                         title="Edit course"
+                        aria-label="Edit course"
                       >
-                        <Edit2 size={13} />
+                        <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleDeleteCourse(course.id)}
                         className="btn btn-icon"
-                        style={{ width: '30px', height: '30px', color: 'var(--color-danger)' }}
+                        style={{ width: '34px', height: '34px', color: 'var(--color-danger)' }}
                         title="Delete course"
+                        aria-label="Delete course"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   </div>

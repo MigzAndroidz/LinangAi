@@ -119,7 +119,7 @@ export const SettingsModal = ({
             </div>
             <h3>Settings & Preferences</h3>
           </div>
-          <button onClick={onClose} className="btn btn-icon" style={{ width: '32px', height: '32px' }}>
+          <button onClick={onClose} className="btn btn-icon" style={{ width: '36px', height: '36px' }} aria-label="Close">
             <X size={16} />
           </button>
         </div>

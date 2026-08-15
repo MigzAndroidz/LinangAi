@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AIService } from '../services/aiService';
 import { COGNITIVE_SKILLS } from '../data/initialData';
+import { Avatar } from './Avatar';
 
 export const ProfileView = ({
   currentProfile,
@@ -80,10 +81,14 @@ export const ProfileView = ({
                       background: isActive ? 'var(--accent-primary)' : 'var(--bg-surface)',
                       color: isActive ? 'white' : 'var(--text-primary)',
                       border: isActive ? '1px solid var(--accent-primary)' : '1px solid var(--border-strong)',
-                      boxShadow: isActive ? 'var(--shadow-sm)' : 'none'
+                      boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+                      gap: '0.4rem',
+                      display: 'inline-flex',
+                      alignItems: 'center'
                     }}
                   >
-                    <span>{p.avatar} {p.name}</span>
+                    <Avatar avatar={p.avatar} size={18} backgroundColor={p.color || '#2563eb'} />
+                    <span>{p.name}</span>
                     {isActive && <CheckCircle2 size={12} />}
                   </button>
                 );
@@ -115,23 +120,17 @@ export const ProfileView = ({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             {/* Mascot / Avatar Ring */}
-            <div style={{ position: 'relative' }}>
-              <div
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <Avatar
+                avatar={currentProfile.avatar || '🦉'}
+                size={68}
+                borderRadius="var(--radius-lg)"
+                backgroundColor={currentProfile.color || '#2563eb'}
                 style={{
-                  width: '68px',
-                  height: '68px',
-                  borderRadius: 'var(--radius-lg)',
-                  background: currentProfile.color || '#2563eb',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '2.2rem',
                   boxShadow: 'var(--shadow-md)',
                   border: '3px solid var(--bg-surface)'
                 }}
-              >
-                {currentProfile.avatar || '🦉'}
-              </div>
+              />
               <img
                 src="/mascot.png"
                 alt="Mascot"
@@ -222,7 +221,7 @@ export const ProfileView = ({
       {activeSubTab === 'diagnosis' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {/* Dual Columns: Strengths vs Weaknesses */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+          <div className="profile-grid">
             {/* Strengths (Superpowers) */}
             <div className="card" style={{ borderLeft: '4px solid var(--color-success)', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -321,7 +320,7 @@ export const ProfileView = ({
               <h3 style={{ fontSize: '1.05rem', margin: 0 }}>Actionable AI Study Recommendations</h3>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
               {diagnosis.prescriptions.map((rx) => (
                 <div
                   key={rx.id}

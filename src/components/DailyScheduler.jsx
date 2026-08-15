@@ -148,8 +148,8 @@ export const DailyScheduler = ({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ textAlign: 'right' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', width: '100%' }}>
+                  <div>
                     <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: '0.875rem' }}>
                       {block.timeWindow}
                     </div>
@@ -162,7 +162,7 @@ export const DailyScheduler = ({
                     <button
                       onClick={() => onStartFocus(matchedAssignment)}
                       className="btn btn-primary"
-                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', minHeight: '36px' }}
                       title="Launch Pomodoro Focus Timer for this task"
                     >
                       <Play size={13} />

@@ -197,14 +197,14 @@ export const AddAssignmentModal = ({
             </div>
             <h3>{initialAssignment ? 'Edit Homework Assignment' : 'Add Homework Assignment'}</h3>
           </div>
-          <button onClick={onClose} className="btn btn-icon" style={{ width: '32px', height: '32px' }}>
+          <button onClick={onClose} className="btn btn-icon" style={{ width: '36px', height: '36px' }} aria-label="Close">
             <X size={16} />
           </button>
         </div>
 
         {/* Tab Switcher */}
         {!initialAssignment && (
-          <div style={{ padding: '0.85rem 1.5rem 0 1.5rem' }}>
+          <div style={{ padding: '0.85rem 1.25rem 0 1.25rem' }}>
             <div className="nav-tabs">
               <button
                 className={`tab-btn ${tab === 'ai_paste' ? 'active' : ''}`}

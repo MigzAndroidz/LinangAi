@@ -547,5 +547,81 @@ Return JSON ONLY with format:
     });
 
     return blocks;
+  },
+
+  // =========================================================================
+  // 6. Actionable AI Study Recommendations (Grounded in Computed Insights)
+  // =========================================================================
+  getActionableRecommendations: async (computedInsights, profile) => {
+    if (!computedInsights || computedInsights.insufficientData) {
+      return [
+        "Log a few more tagged homework assignments and milestone reflections to unlock personalized algorithmic study recommendations!"
+      ];
+    }
+
+    const apiKey = AIService.getApiKey();
+    if (apiKey) {
+      try {
+        const systemPrompt = `You are analyzing a student's REAL computed study statistics for ${profile?.name || 'the student'} (not guessing).
+Given this exact computed data:
+${JSON.stringify(computedInsights, null, 2)}
+
+Instructions:
+- Write 3-4 short, specific, actionable study recommendations.
+- Reference the actual skill names and real numbers from the data provided.
+- Do not invent statistics or skills not present in the data.
+- If insufficientData is true, write one encouraging message explaining the student needs to log a few more tagged assignments.
+- Return a clean JSON array of strings: ["recommendation 1", "recommendation 2", "recommendation 3"] with no markdown formatting.`;
+
+        const responseText = await AIService.callGemini(systemPrompt, 'Generate recommendations based strictly on the provided real statistics');
+        const cleaned = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (err) {
+        console.warn('Gemini recommendations call failed, using offline heuristics:', err);
+      }
+    }
+
+    // Offline heuristic fallback based on real computed insights
+    return AIService.offlineActionableRecommendations(computedInsights, profile);
+  },
+
+  offlineActionableRecommendations: (computedInsights, profile) => {
+    if (!computedInsights || computedInsights.insufficientData) {
+      return [
+        "Log a few more tagged homework assignments and milestone reflections to unlock personalized algorithmic study recommendations!"
+      ];
+    }
+
+    const recs = [];
+    const { strengths = [], growthAreas = [], frictionPoints = [] } = computedInsights;
+
+    if (strengths.length > 0) {
+      const topStrength = strengths[0];
+      const skillName = (topStrength.skill || 'core topics').replace(/_/g, ' ');
+      recs.push(`🌟 Leverage your high mastery in ${skillName} (avg confidence: ${topStrength.avgConfidence}/5) by time-boxing these tasks and reinvesting focus into complex growth areas.`);
+    }
+
+    if (growthAreas.length > 0) {
+      const topGrowth = growthAreas[0];
+      const skillName = (topGrowth.skill || 'growth areas').replace(/_/g, ' ');
+      const challengePct = Math.round((topGrowth.challengeFlagRate || 0) * 100);
+      recs.push(`🎯 Dedicate early study blocks to ${skillName} (${challengePct}% challenge rate) and consult the AI Socratic Tutor for step-by-step problem decomposition.`);
+    }
+
+    if (frictionPoints.length > 0) {
+      const topFriction = frictionPoints[0];
+      const skillName = (topFriction.skill || 'challenging concepts').replace(/_/g, ' ');
+      recs.push(`⏱️ Streamline focus in ${skillName}: you are logging ${Math.round(topFriction.avgFocusMinutes)}m average per task. Try breaking milestones into 15-minute intervals to maintain momentum.`);
+    }
+
+    if (recs.length === 0) {
+      recs.push(`Continue logging assignments and reflections to further refine your personalized mastery trajectory.`);
+    }
+
+    return recs;
   }
 };
+

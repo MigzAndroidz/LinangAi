@@ -418,6 +418,7 @@ export function App() {
             courses={courses}
             onStartFocus={handleStartFocus}
             onOpenSchedule={() => setActiveView('schedule')}
+            currentProfile={currentProfile}
           />
         )}
 

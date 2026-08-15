@@ -94,7 +94,7 @@ export const Header = ({
             >
               <img
                 src="/mascot.png"
-                alt="Linang AI Owl Mascot"
+                alt="Linang AI Mascot"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>

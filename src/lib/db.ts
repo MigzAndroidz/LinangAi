@@ -82,6 +82,15 @@ export interface UserSettings {
   customTimerMinutes?: number;
 }
 
+export interface DailyStatsSnapshot {
+  id: string; // `${profileId}_${date}` e.g. "prof-abc_2026-08-15"
+  profileId: string;
+  date: string; // YYYY-MM-DD
+  cumulativeXP: number;
+  cumulativeFocusMinutes: number;
+  cumulativeCompletedCount: number;
+}
+
 // --- Dexie Database Class ---
 export class LinangDexieDB extends Dexie {
   profiles!: Table<UserProfile, string>;
@@ -89,6 +98,7 @@ export class LinangDexieDB extends Dexie {
   assignments!: Table<Assignment, string>;
   userStats!: Table<UserStats, string>;
   userSettings!: Table<UserSettings, string>;
+  dailySnapshots!: Table<DailyStatsSnapshot, string>;
 
   constructor() {
     super('LinangAI_IndexedDB');
@@ -107,6 +117,15 @@ export class LinangDexieDB extends Dexie {
       assignments: '&id, profileId, courseId, dueDate, status, priority, *skills',
       userStats: '&profileId',
       userSettings: '&profileId'
+    });
+
+    this.version(3).stores({
+      profiles: '&id, name, handle, createdAt',
+      courses: '&id, profileId, code, name',
+      assignments: '&id, profileId, courseId, dueDate, status, priority, *skills',
+      userStats: '&profileId',
+      userSettings: '&profileId',
+      dailySnapshots: '&id, profileId, date'
     });
   }
 }

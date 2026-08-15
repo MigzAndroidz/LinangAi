@@ -77,6 +77,9 @@ export function App() {
       StorageService.getSettings(profileId)
     ]);
 
+    // Ensure today's snapshot exists for historical forecasting
+    await StorageService.ensureTodaySnapshot(profileId);
+
     setCourses(profCourses);
     setAssignments(profAssignments);
     setUserStats(profStats);

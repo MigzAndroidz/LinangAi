@@ -10,6 +10,9 @@ import {
   Sparkles,
   Award,
   TrendingUp,
+  TrendingDown,
+  Minus,
+  Calendar,
   Target,
   Lightbulb,
   AlertTriangle,
@@ -17,7 +20,9 @@ import {
   Info
 } from 'lucide-react';
 import { computeCognitiveInsights } from '../services/insightsEngine';
+import { computeForecast } from '../services/forecastEngine';
 import { AIService } from '../services/aiService';
+import { StorageService } from '../services/storage';
 import { COGNITIVE_SKILLS } from '../data/initialData';
 
 export const AnalyticsModal = ({
@@ -40,6 +45,20 @@ export const AnalyticsModal = ({
   const skillMetaMap = useMemo(() => {
     return Object.fromEntries(COGNITIVE_SKILLS.map((s) => [s.id, s]));
   }, []);
+
+  // ─── Fetch Forecast Data ───────────────────────────────────────────────────
+  const [dailySnapshots, setDailySnapshots] = useState([]);
+
+  useEffect(() => {
+    if (isOpen && currentProfile) {
+      StorageService.getDailySnapshots(currentProfile.id).then(setDailySnapshots);
+    }
+  }, [isOpen, currentProfile]);
+
+  const forecast = useMemo(() => {
+    if (!currentProfile) return null;
+    return computeForecast(dailySnapshots, currentProfile.id);
+  }, [dailySnapshots, currentProfile]);
 
   // ─── Fetch Grounded AI Recommendations ───────────────────────────────────────
   useEffect(() => {
@@ -292,6 +311,86 @@ export const AnalyticsModal = ({
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Study Forecast Section */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <h4 style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: 0 }}>
+              <Calendar size={16} style={{ color: 'var(--accent-primary)' }} />
+              <span>Study Forecast</span>
+            </h4>
+            
+            {!forecast || forecast.insufficientData ? (
+              <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Info size={15} />
+                <span>Keep studying! Forecasts unlock after a few more days of tracked activity ({forecast?.daysTracked || 0}/3 days so far).</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Based on your last {forecast.daysTracked} days of activity.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '0.75rem' }}>
+                  
+                  {/* Monthly Projection */}
+                  <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.85rem' }}>
+                    <h5 style={{ fontSize: '0.8rem', margin: '0 0 0.5rem 0' }}>This Month's Projection</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Total XP</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.monthly.xp}</span>
+                          {forecast.trend.xp === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.xp === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Focus Minutes</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.monthly.focusMinutes}</span>
+                          {forecast.trend.focusMinutes === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.focusMinutes === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Assignments Done</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.monthly.completedCount}</span>
+                          {forecast.trend.completedCount === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.completedCount === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Annual Projection */}
+                  <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', padding: '0.85rem' }}>
+                    <h5 style={{ fontSize: '0.8rem', margin: '0 0 0.5rem 0' }}>This Year's Projection</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Total XP</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.annual.xp}</span>
+                          {forecast.trend.xp === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.xp === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Focus Minutes</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.annual.focusMinutes}</span>
+                          {forecast.trend.focusMinutes === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.focusMinutes === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span>Assignments Done</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                          <span style={{ fontWeight: 600 }}>{forecast.annual.completedCount}</span>
+                          {forecast.trend.completedCount === 'up' ? <TrendingUp size={14} color="var(--color-success)" /> : forecast.trend.completedCount === 'down' ? <TrendingDown size={14} color="var(--color-warning-text)" /> : <Minus size={14} color="var(--text-muted)" />}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ========================================================================= */}

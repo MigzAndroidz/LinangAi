@@ -61,6 +61,7 @@ async function purgeDemoProfile(id) {
   await db.assignments.where('profileId').equals(id).delete();
   await db.userStats.delete(id);
   await db.userSettings.delete(id);
+  await db.dailySnapshots.where('profileId').equals(id).delete();
 }
 
 async function runDemoMigration() {
@@ -200,6 +201,7 @@ export const StorageService = {
       await db.assignments.where('profileId').equals(id).delete();
       await db.userStats.delete(id);
       await db.userSettings.delete(id);
+      await db.dailySnapshots.where('profileId').equals(id).delete();
 
       const remaining = await db.profiles.toArray();
       StorageService.setCurrentProfileId(remaining[0].id);
@@ -353,6 +355,44 @@ export const StorageService = {
   },
 
   // ==========================================
+  // Daily Snapshots & Forecasts
+  // ==========================================
+  ensureTodaySnapshot: async (profileId) => {
+    const targetId = profileId || StorageService.getCurrentProfileId();
+    if (!targetId) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const snapshotId = `${targetId}_${today}`;
+      const existing = await db.dailySnapshots.get(snapshotId);
+      
+      // Note: Older history doesn't exist retroactively. Forecast explicitly relies on "last N days" of data from today forward.
+      if (!existing) {
+        const stats = await StorageService.getUserStats(targetId);
+        await db.dailySnapshots.put({
+          id: snapshotId,
+          profileId: targetId,
+          date: today,
+          cumulativeXP: stats.xp || 0,
+          cumulativeFocusMinutes: stats.totalFocusMinutes || 0,
+          cumulativeCompletedCount: stats.completedHomeworkCount || 0
+        });
+      }
+    } catch (e) {
+      console.warn('ensureTodaySnapshot error:', e);
+    }
+  },
+
+  getDailySnapshots: async (profileId) => {
+    const targetId = profileId || StorageService.getCurrentProfileId();
+    try {
+      const list = await db.dailySnapshots.where('profileId').equals(targetId).toArray();
+      return list.sort((a, b) => a.date.localeCompare(b.date));
+    } catch {
+      return [];
+    }
+  },
+
+  // ==========================================
   // User Settings & Preferences (Strictly Scoped by profileId)
   // ==========================================
   getSettings: async (profileId) => {
@@ -393,6 +433,7 @@ export const StorageService = {
       const assignments = await db.assignments.toArray();
       const stats = await db.userStats.toArray();
       const settings = await db.userSettings.toArray();
+      const dailySnapshots = await db.dailySnapshots.toArray();
 
       const backup = {
         version: '3.0',
@@ -403,7 +444,8 @@ export const StorageService = {
         courses,
         assignments,
         userStats: stats,
-        userSettings: settings
+        userSettings: settings,
+        dailySnapshots
       };
 
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -441,6 +483,10 @@ export const StorageService = {
         await db.userSettings.clear();
         await db.userSettings.bulkPut(parsed.userSettings);
       }
+      if (parsed.dailySnapshots) {
+        await db.dailySnapshots.clear();
+        await db.dailySnapshots.bulkPut(parsed.dailySnapshots);
+      }
       if (parsed.currentProfileId) {
         StorageService.setCurrentProfileId(parsed.currentProfileId);
       }
@@ -457,6 +503,7 @@ export const StorageService = {
       await db.assignments.clear();
       await db.userStats.clear();
       await db.userSettings.clear();
+      await db.dailySnapshots.clear();
       await initDatabase();
     } catch (e) {
       console.warn('resetAllData error:', e);

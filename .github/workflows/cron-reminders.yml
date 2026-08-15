@@ -1,0 +1,31 @@
+name: Cron — Linang AI Push Reminders
+
+on:
+  # Fires every 5 minutes — GitHub Actions supports per-minute crons
+  schedule:
+    - cron: '*/5 * * * *'
+  # Manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  check-reminders:
+    name: Trigger Server-Side Reminder Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: POST to /api/cron/check-reminders
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST https://linang-ai.vercel.app/api/cron/check-reminders \
+            -H "x-cron-secret: ${{ secrets.CRON_SHARED_SECRET }}" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP status: $response"
+          if [ "$response" -lt 200 ] || [ "$response" -ge 300 ]; then
+            echo "::error::Cron endpoint returned non-2xx status: $response"
+            exit 1
+          fi
+
+      - name: Log completion
+        run: echo "Reminder check completed at $(date -u)"

@@ -17,6 +17,7 @@ import { ToastContainer } from './components/ToastContainer';
 import { StorageService } from './services/storage';
 import { notificationService } from './services/notificationService';
 import { audioService } from './services/audioService';
+import { subscribeToPush } from './services/pushService';
 
 export function App() {
   // Profiles State
@@ -176,6 +177,10 @@ export function App() {
         message: 'You will receive proactive notifications before homework deadlines!',
         type: 'success'
       });
+      // Also subscribe to Web Push so reminders fire even when the tab is closed
+      subscribeToPush(currentProfileId).catch((err) =>
+        console.warn('[App] Push subscription failed (non-fatal):', err)
+      );
     }
   };
 

@@ -11,6 +11,41 @@ import {
 
 const CURRENT_PROFILE_KEY = 'linang_active_profile_id_v2';
 
+// ─── Server-side sync helper ─────────────────────────────────────────────────
+// Fire-and-forget: after every local IndexedDB write, push a minimal summary
+// of active assignments to /api/push/sync-assignments so the server-side cron
+// can check reminder thresholds even when the browser tab is closed.
+// A failed sync NEVER throws — it must never break local saves.
+async function syncAssignmentsToServer(profileId, courseMap = {}) {
+  try {
+    const allAssignments = await db.assignments
+      .where('profileId')
+      .equals(profileId)
+      .toArray();
+
+    const minimal = allAssignments
+      .filter((a) => a.status !== 'completed')
+      .map((a) => ({
+        id: a.id,
+        title: a.title,
+        // courseCode is resolved client-side from the courseMap passed in,
+        // or from a cached field on the assignment itself
+        courseCode: courseMap[a.courseId]?.code || a.courseCode || '',
+        dueDate: a.dueDate,
+        reminderOffsets: a.reminderOffsets || [1440, 180, 60, 15],
+        status: a.status
+      }));
+
+    fetch('/api/push/sync-assignments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profileId, assignments: minimal })
+    }).catch(() => {}); // truly fire-and-forget; ignore network failures
+  } catch {
+    // Non-fatal — local save already succeeded
+  }
+}
+
 // Known identifiers for the old hardcoded demo seed profiles.
 // We use both id AND handle so we never accidentally delete a real user
 // who happened to pick the same id format.
@@ -251,6 +286,8 @@ export const StorageService = {
       await db.assignments.where('profileId').equals(targetId).delete();
       const withProfile = assignments.map((a) => ({ ...a, profileId: targetId }));
       await db.assignments.bulkPut(withProfile);
+      // Best-effort server sync for push reminders
+      syncAssignmentsToServer(targetId);
     } catch (e) {
       console.warn('saveAssignments error:', e);
     }
@@ -261,14 +298,19 @@ export const StorageService = {
     try {
       const record = { ...assignment, profileId: targetId };
       await db.assignments.put(record);
+      // Best-effort server sync for push reminders
+      syncAssignmentsToServer(targetId);
     } catch (e) {
       console.warn('saveSingleAssignment error:', e);
     }
   },
 
-  deleteSingleAssignment: async (id) => {
+  deleteSingleAssignment: async (id, profileId) => {
+    const targetId = profileId || StorageService.getCurrentProfileId();
     try {
       await db.assignments.delete(id);
+      // Best-effort server sync for push reminders
+      syncAssignmentsToServer(targetId);
     } catch (e) {
       console.warn('deleteSingleAssignment error:', e);
     }

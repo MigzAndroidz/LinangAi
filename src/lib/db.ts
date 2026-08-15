@@ -79,6 +79,7 @@ export interface UserSettings {
   defaultReminderOffsets: number[];
   studyHoursStart: string;
   studyHoursEnd: string;
+  customTimerMinutes?: number;
 }
 
 // --- Dexie Database Class ---
@@ -93,6 +94,14 @@ export class LinangDexieDB extends Dexie {
     super('LinangAI_IndexedDB');
 
     this.version(1).stores({
+      profiles: '&id, name, handle, createdAt',
+      courses: '&id, profileId, code, name',
+      assignments: '&id, profileId, courseId, dueDate, status, priority, *skills',
+      userStats: '&profileId',
+      userSettings: '&profileId'
+    });
+
+    this.version(2).stores({
       profiles: '&id, name, handle, createdAt',
       courses: '&id, profileId, code, name',
       assignments: '&id, profileId, courseId, dueDate, status, priority, *skills',

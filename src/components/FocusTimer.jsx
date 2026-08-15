@@ -21,13 +21,22 @@ export const FocusTimer = ({
   courses,
   selectedAssignment = null,
   onSelectAssignment,
-  onSessionComplete
+  onSessionComplete,
+  settings,
+  onSaveSettings
 }) => {
-  // Modes: 'focus_25' (25m), 'deep_50' (50m), 'short_break' (5m), 'long_break' (15m)
+  // Modes: 'focus_25' (25m), 'deep_50' (50m), 'short_break' (5m), 'long_break' (15m), 'custom'
   const [timerMode, setTimerMode] = useState('focus_25');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalDuration, setTotalDuration] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState(settings?.customTimerMinutes || 25);
+
+  useEffect(() => {
+    if (settings?.customTimerMinutes) {
+      setCustomMinutes(settings.customTimerMinutes);
+    }
+  }, [settings?.customTimerMinutes]);
 
   // Ambient Soundscape state
   const [ambientSound, setAmbientSound] = useState('off'); // 'off' | 'rain' | 'binaural' | 'lofi' | 'brown_noise'
@@ -45,8 +54,27 @@ export const FocusTimer = ({
     if (mode === 'deep_50') seconds = 50 * 60;
     if (mode === 'short_break') seconds = 5 * 60;
     if (mode === 'long_break') seconds = 15 * 60;
+    if (mode === 'custom') seconds = customMinutes * 60;
     setTimeLeft(seconds);
     setTotalDuration(seconds);
+  };
+
+  const handleCustomMinutesChange = (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (isNaN(val)) val = 1;
+    if (val < 1) val = 1;
+    if (val > 180) val = 180;
+    setCustomMinutes(val);
+    
+    if (timerMode === 'custom') {
+      setIsRunning(false);
+      setTimeLeft(val * 60);
+      setTotalDuration(val * 60);
+    }
+    
+    if (onSaveSettings && settings) {
+      onSaveSettings({ ...settings, customTimerMinutes: val });
+    }
   };
 
   useEffect(() => {
@@ -177,7 +205,30 @@ export const FocusTimer = ({
         >
           5m Break
         </button>
+        <button
+          type="button"
+          className={`tab-btn ${timerMode === 'custom' ? 'active' : ''}`}
+          onClick={() => setDurationForMode('custom')}
+          style={{ fontSize: '0.775rem', padding: '0.35rem 0.6rem' }}
+        >
+          Custom
+        </button>
       </div>
+
+      {timerMode === 'custom' && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', marginBottom: '0.5rem', padding: '0 0.2rem' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>Minutes (1-180):</label>
+          <input
+            type="number"
+            min="1"
+            max="180"
+            value={customMinutes}
+            onChange={handleCustomMinutesChange}
+            className="form-input"
+            style={{ width: '60px', padding: '0.2rem', fontSize: '0.8rem' }}
+          />
+        </div>
+      )}
 
       {/* Task Link Selector */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
@@ -285,27 +336,35 @@ export const FocusTimer = ({
           </button>
           <button
             type="button"
-            className={`ambient-btn ${ambientSound === 'binaural' ? 'active' : ''}`}
-            onClick={() => handleAmbientChange(ambientSound === 'binaural' ? 'off' : 'binaural')}
-            title="40Hz Alpha Wave Focus"
+            className={`ambient-btn ${ambientSound === 'ocean' ? 'active' : ''}`}
+            onClick={() => handleAmbientChange(ambientSound === 'ocean' ? 'off' : 'ocean')}
+            title="Ocean Waves"
           >
-            🎧 40Hz
+            🌊 Ocean
           </button>
           <button
             type="button"
-            className={`ambient-btn ${ambientSound === 'lofi' ? 'active' : ''}`}
-            onClick={() => handleAmbientChange(ambientSound === 'lofi' ? 'off' : 'lofi')}
-            title="Lo-Fi Vinyl Tone"
+            className={`ambient-btn ${ambientSound === 'forest' ? 'active' : ''}`}
+            onClick={() => handleAmbientChange(ambientSound === 'forest' ? 'off' : 'forest')}
+            title="Forest Ambience"
           >
-            📻 Lo-Fi
+            🌲 Forest
           </button>
           <button
             type="button"
-            className={`ambient-btn ${ambientSound === 'brown_noise' ? 'active' : ''}`}
-            onClick={() => handleAmbientChange(ambientSound === 'brown_noise' ? 'off' : 'brown_noise')}
-            title="Brown Noise"
+            className={`ambient-btn ${ambientSound === 'pad' ? 'active' : ''}`}
+            onClick={() => handleAmbientChange(ambientSound === 'pad' ? 'off' : 'pad')}
+            title="Soft Piano Pad"
           >
-            ☕ Brown
+            🎹 Pad
+          </button>
+          <button
+            type="button"
+            className={`ambient-btn ${ambientSound === 'focus_tone' ? 'active' : ''}`}
+            onClick={() => handleAmbientChange(ambientSound === 'focus_tone' ? 'off' : 'focus_tone')}
+            title="Calm Focus Tone"
+          >
+            🧘 Tone
           </button>
         </div>
 

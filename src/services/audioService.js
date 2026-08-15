@@ -199,59 +199,23 @@ class AudioService {
           b6 = white * 0.115926;
         }
 
-        const whiteNoise = ctx.createBufferSource();
-        whiteNoise.buffer = noiseBuffer;
-        whiteNoise.loop = true;
+        const rainSource = ctx.createBufferSource();
+        rainSource.buffer = noiseBuffer;
+        rainSource.loop = true;
 
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1200, ctx.currentTime);
 
-        whiteNoise.connect(filter);
+        rainSource.connect(filter);
         filter.connect(this.ambientGain);
-        whiteNoise.start();
-        this.ambientSource = whiteNoise;
+        rainSource.start();
+        this.ambientSource = rainSource;
         break;
       }
 
-      case 'binaural': {
-        // 40Hz Gamma / 14Hz Alpha focus binaural frequency
-        // Left Ear: 210Hz, Right Ear: 224Hz (14Hz Alpha wave differential)
-        const merger = ctx.createChannelMerger(2);
-        
-        const oscL = ctx.createOscillator();
-        oscL.type = 'sine';
-        oscL.frequency.setValueAtTime(210, ctx.currentTime);
-
-        const oscR = ctx.createOscillator();
-        oscR.type = 'sine';
-        oscR.frequency.setValueAtTime(224, ctx.currentTime);
-
-        const gainL = ctx.createGain();
-        gainL.gain.setValueAtTime(0.2, ctx.currentTime);
-        const gainR = ctx.createGain();
-        gainR.gain.setValueAtTime(0.2, ctx.currentTime);
-
-        oscL.connect(gainL);
-        oscR.connect(gainR);
-
-        gainL.connect(merger, 0, 0); // Left channel
-        gainR.connect(merger, 0, 1); // Right channel
-
-        merger.connect(this.ambientGain);
-        oscL.start();
-        oscR.start();
-
-        this.ambientSource = {
-          stop: () => {
-            try { oscL.stop(); oscR.stop(); } catch {}
-          }
-        };
-        break;
-      }
-
-      case 'brown_noise': {
-        // Deep Brownian noise for extreme focus
+      case 'ocean': {
+        // Brown noise + LFO amplitude modulation
         const bufferSize = ctx.sampleRate * 2;
         const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const output = noiseBuffer.getChannelData(0);
@@ -263,43 +227,187 @@ class AudioService {
           output[i] *= 3.5;
         }
 
-        const brownSource = ctx.createBufferSource();
-        brownSource.buffer = noiseBuffer;
-        brownSource.loop = true;
+        const oceanSource = ctx.createBufferSource();
+        oceanSource.buffer = noiseBuffer;
+        oceanSource.loop = true;
 
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(450, ctx.currentTime);
+        filter.frequency.setValueAtTime(400, ctx.currentTime);
 
-        brownSource.connect(filter);
-        filter.connect(this.ambientGain);
-        brownSource.start();
-        this.ambientSource = brownSource;
+        const lfo = ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.setValueAtTime(0.1, ctx.currentTime); // 10 second period
+
+        const lfoGain = ctx.createGain();
+        lfoGain.gain.setValueAtTime(0.5, ctx.currentTime); // LFO depth
+        
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(0.5, ctx.currentTime); // Base volume
+        
+        lfo.connect(lfoGain);
+        lfoGain.connect(masterGain.gain);
+        
+        oceanSource.connect(filter);
+        filter.connect(masterGain);
+        masterGain.connect(this.ambientGain);
+
+        oceanSource.start();
+        lfo.start();
+        
+        this.ambientSource = {
+          stop: () => {
+            try { oceanSource.stop(); lfo.stop(); } catch {}
+          }
+        };
         break;
       }
 
-      case 'lofi': {
-        // Warm lo-fi vinyl hiss and filtered tone
+      case 'forest': {
+        // Filtered noise + randomized chirps
         const bufferSize = ctx.sampleRate * 2;
         const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const output = noiseBuffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
-          output[i] = (Math.random() * 2 - 1) * (Math.random() > 0.985 ? 0.4 : 0.04);
+          output[i] = (Math.random() * 2 - 1) * 0.1;
         }
 
-        const lofiSource = ctx.createBufferSource();
-        lofiSource.buffer = noiseBuffer;
-        lofiSource.loop = true;
+        const windSource = ctx.createBufferSource();
+        windSource.buffer = noiseBuffer;
+        windSource.loop = true;
 
         const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(900, ctx.currentTime);
-        filter.Q.setValueAtTime(1.5, ctx.currentTime);
+        filter.frequency.setValueAtTime(800, ctx.currentTime);
+        filter.Q.setValueAtTime(0.5, ctx.currentTime);
 
-        lofiSource.connect(filter);
+        windSource.connect(filter);
         filter.connect(this.ambientGain);
-        lofiSource.start();
-        this.ambientSource = lofiSource;
+        windSource.start();
+
+        let timeoutId;
+        const playChirp = () => {
+          if (this.currentAmbientType !== 'forest') return;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          
+          const t = ctx.currentTime;
+          const freq = 2000 + Math.random() * 1500;
+          osc.frequency.setValueAtTime(freq, t);
+          osc.frequency.exponentialRampToValueAtTime(freq * 0.8, t + 0.1);
+          
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.1, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+          
+          osc.connect(gain);
+          gain.connect(this.ambientGain);
+          osc.start(t);
+          osc.stop(t + 0.15);
+          
+          timeoutId = setTimeout(playChirp, 2000 + Math.random() * 4000);
+        };
+        timeoutId = setTimeout(playChirp, 1000);
+
+        this.ambientSource = {
+          stop: () => {
+            try { windSource.stop(); } catch {}
+            clearTimeout(timeoutId);
+          }
+        };
+        break;
+      }
+
+      case 'pad': {
+        // Soft Piano Pad (synthesized 2-3 sine oscillators, slow I-IV-V pad)
+        const chords = [
+          [261.63, 329.63, 392.00], // C4, E4, G4 (I)
+          [349.23, 440.00, 523.25], // F4, A4, C5 (IV)
+          [392.00, 493.88, 587.33]  // G4, B4, D5 (V)
+        ];
+        
+        let chordIndex = 0;
+        let timeoutId;
+        const oscs = [];
+        const gains = [];
+        
+        for (let i = 0; i < 3; i++) {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0, ctx.currentTime);
+          
+          osc.connect(gain);
+          gain.connect(this.ambientGain);
+          osc.start();
+          
+          oscs.push(osc);
+          gains.push(gain);
+        }
+        
+        const playChord = () => {
+          if (this.currentAmbientType !== 'pad') return;
+          const t = ctx.currentTime;
+          const chord = chords[chordIndex];
+          
+          for (let i = 0; i < 3; i++) {
+            oscs[i].frequency.setValueAtTime(chord[i], t);
+            gains[i].gain.cancelScheduledValues(t);
+            gains[i].gain.setValueAtTime(gains[i].gain.value, t);
+            gains[i].gain.linearRampToValueAtTime(0.1, t + 3);
+            gains[i].gain.linearRampToValueAtTime(0, t + 9);
+          }
+          
+          chordIndex = (chordIndex + 1) % chords.length;
+          timeoutId = setTimeout(playChord, 8000); // 8 seconds per chord
+        };
+        
+        playChord();
+        
+        this.ambientSource = {
+          stop: () => {
+            clearTimeout(timeoutId);
+            try {
+               for(let i=0; i<3; i++) {
+                 gains[i].gain.cancelScheduledValues(ctx.currentTime);
+                 gains[i].gain.linearRampToValueAtTime(0, ctx.currentTime + 0.1);
+                 setTimeout(() => {
+                   try { oscs[i].stop(); } catch {}
+                 }, 150);
+               }
+            } catch {}
+          }
+        };
+        break;
+      }
+
+      case 'focus_tone': {
+        // Calm Focus Tone: two detuned oscillators (e.g., 200Hz & 204Hz)
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(200, ctx.currentTime);
+        
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(204, ctx.currentTime);
+        
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ambientGain);
+        
+        osc1.start();
+        osc2.start();
+        
+        this.ambientSource = {
+          stop: () => {
+            try { osc1.stop(); osc2.stop(); } catch {}
+          }
+        };
         break;
       }
 

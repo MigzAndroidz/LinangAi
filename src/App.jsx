@@ -441,6 +441,8 @@ export function App() {
                 selectedAssignment={selectedFocusAssignment}
                 onSelectAssignment={setSelectedFocusAssignment}
                 onSessionComplete={handleFocusSessionComplete}
+                settings={settings}
+                onSaveSettings={handleSaveSettings}
               />
 
               {notifPermission !== 'granted' && (

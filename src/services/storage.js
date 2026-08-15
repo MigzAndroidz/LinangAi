@@ -146,50 +146,28 @@ export const StorageService = {
       year: profileData.year || 'Freshman',
       major: profileData.major || 'Undeclared',
       targetGoal: profileData.targetGoal || 'Academic Excellence',
-      bio: profileData.bio || 'Organizing my academic journey with Linang AI.',
+      bio: profileData.bio || '',
       createdAt: new Date().toISOString()
     };
 
     try {
       await db.profiles.put(newProfile);
 
-      // Initialize Default Scoped Courses for New Profile
-      const defaultCourses = [
-        {
-          id: `c_${newId}_1`,
-          profileId: newId,
-          code: 'CORE 101',
-          name: 'Introduction to Major Studies',
-          color: '#2563eb',
-          instructor: 'Faculty Advisor',
-          schedule: 'Mon, Wed 10:00 AM'
-        },
-        {
-          id: `c_${newId}_2`,
-          profileId: newId,
-          code: 'GEN 120',
-          name: 'Quantitative Reasoning & Methods',
-          color: '#059669',
-          instructor: 'Prof. Morgan',
-          schedule: 'Tue, Thu 2:00 PM'
-        }
-      ];
-      await db.courses.bulkPut(defaultCourses);
-
-      // Initialize Default Scoped User Stats
+      // Initialize stats at zero — no fake XP, streak, or pre-seeded courses.
+      // Users earn everything from scratch.
       const defaultStats = {
         profileId: newId,
-        xp: 100,
+        xp: 0,
         level: 1,
         levelTitle: 'Novice',
-        streak: 1,
+        streak: 0,
         totalFocusMinutes: 0,
         completedHomeworkCount: 0,
         lastActiveDate: new Date().toISOString().slice(0, 10)
       };
       await db.userStats.put(defaultStats);
 
-      // Initialize Default Scoped Preferences
+      // Initialize user preferences (required for app functionality)
       const defaultSettings = {
         profileId: newId,
         ...INITIAL_SETTINGS

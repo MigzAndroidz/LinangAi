@@ -65,6 +65,12 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Safe-area insets for notched phones */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 [data-theme="dark"] {
@@ -129,6 +135,8 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
+  /* Prevent horizontal scroll from overflowing children */
+  overflow-x: hidden;
 }
 
 #root {
@@ -165,11 +173,19 @@ button {
   justify-content: center;
   gap: 0.5rem;
   transition: all var(--transition-fast);
+  /* Prevent text from being too tiny to tap */
+  min-height: 36px;
 }
 
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Prevent images from overflowing */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 /* Custom Scrollbars */
@@ -199,10 +215,17 @@ button:disabled {
   max-width: 1380px;
   width: 100%;
   margin: 0 auto;
-  padding: 1.25rem 1.5rem 3rem 1.5rem;
+  padding: 1.25rem 1.5rem 5rem 1.5rem; /* extra bottom padding for mobile nav */
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .app-container {
+    padding: 0.85rem 0.85rem 5rem 0.85rem;
+    gap: 1rem;
+  }
 }
 
 .main-content-layout {
@@ -229,23 +252,33 @@ button:disabled {
   top: 0;
   z-index: 40;
   backdrop-filter: blur(12px);
+  /* Support notched devices */
+  padding-top: var(--safe-top);
 }
 
 .header-inner {
   max-width: 1380px;
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .header-inner {
+    padding: 0.6rem 0.85rem;
+    gap: 0.5rem;
+  }
 }
 
 .brand-section {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .brand-icon-wrapper {
@@ -261,32 +294,76 @@ button:disabled {
 }
 
 .brand-title {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+}
+
+@media (max-width: 400px) {
+  .brand-title {
+    font-size: 1rem;
+  }
 }
 
 .brand-title span {
   color: var(--accent-primary);
 }
 
+/* Mobile: hide subtitle under 480px */
+.brand-subtitle {
+  font-size: 0.725rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .brand-subtitle {
+    display: none;
+  }
+}
+
 .header-status-group {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .stat-pill {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
-  padding: 0.4rem 0.85rem;
+  padding: 0.35rem 0.75rem;
   border-radius: var(--radius-full);
-  font-size: 0.825rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Hide XP text on small screens — only show the icon+level */
+.stat-pill .xp-text {
+  display: inline;
+}
+
+@media (max-width: 640px) {
+  .stat-pill .xp-text {
+    display: none;
+  }
+  .stat-pill {
+    padding: 0.35rem 0.55rem;
+  }
+}
+
+/* Hide streak + XP pills on very small screens to save space */
+@media (max-width: 380px) {
+  .stat-pill {
+    display: none;
+  }
 }
 
 .stat-pill.streak {
@@ -316,7 +393,113 @@ button:disabled {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Mobile Navigation (Bottom Tab Bar — replaces header tabs on mobile)
+   ========================================================================== */
+
+.mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.5rem 0.25rem;
+  padding-bottom: calc(0.5rem + var(--safe-bottom));
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+}
+
+.mobile-nav-inner {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+}
+
+.mobile-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.35rem 0.25rem;
+  border-radius: var(--radius-md);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-height: auto;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.mobile-nav-btn.active {
+  color: var(--accent-primary);
+}
+
+.mobile-nav-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+.mobile-nav-btn.add-btn {
+  background: var(--accent-primary);
+  color: white;
+  border-radius: var(--radius-full);
+  width: 44px;
+  height: 44px;
+  margin: auto;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+@media (max-width: 768px) {
+  .mobile-nav {
+    display: flex;
+    flex-direction: column;
+  }
+  /* Hide desktop tabs inside header on mobile */
+  .header-nav-tabs {
+    display: none;
+  }
+  /* Hide "Add Homework" text button from header on mobile */
+  .header-add-btn-text {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .header-nav-tabs {
+    display: flex;
+    align-items: center;
+  }
+  .mobile-nav {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Hamburger Menu (mobile profile/settings menu)
+   ========================================================================== */
+
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: flex;
+  }
 }
 
 /* ==========================================================================
@@ -414,15 +597,22 @@ button:disabled {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   overflow-x: auto;
+  /* Hide scrollbar visually but keep functionality */
+  scrollbar-width: none;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.85rem;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
   white-space: nowrap;
+  min-height: auto;
 }
 
 .tab-btn:hover {
@@ -457,14 +647,22 @@ button:disabled {
   background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   color: white;
   border-radius: var(--radius-lg);
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.25rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
+  gap: 1rem;
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 640px) {
+  .briefing-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.85rem;
+  }
 }
 
 .briefing-card::before {
@@ -481,8 +679,8 @@ button:disabled {
 
 .briefing-content h3 {
   color: white;
-  font-size: 1.15rem;
-  margin-bottom: 0.35rem;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -490,7 +688,7 @@ button:disabled {
 
 .briefing-content p {
   color: #94a3b8;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   max-width: 750px;
 }
 
@@ -501,6 +699,19 @@ button:disabled {
   flex-shrink: 0;
 }
 
+@media (max-width: 640px) {
+  .briefing-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .briefing-actions .btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.8rem;
+    padding: 0.45rem 0.75rem;
+  }
+}
+
 /* ==========================================================================
    Assignment Cards & List
    ========================================================================== */
@@ -509,7 +720,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
 }
@@ -517,7 +728,18 @@ button:disabled {
 .search-input-wrapper {
   position: relative;
   flex: 1;
-  min-width: 240px;
+  min-width: 200px;
+}
+
+@media (max-width: 480px) {
+  .search-input-wrapper {
+    min-width: 0;
+    width: 100%;
+  }
+  .assignment-controls-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .search-input-wrapper svg {
@@ -553,6 +775,7 @@ button:disabled {
   color: var(--text-primary);
   font-weight: 500;
   cursor: pointer;
+  min-width: 0;
 }
 
 .select-filter:focus {
@@ -570,7 +793,7 @@ button:disabled {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.15rem 1.25rem;
+  padding: 1.1rem 1.15rem;
   transition: all var(--transition-fast);
   position: relative;
   display: flex;
@@ -582,6 +805,13 @@ button:disabled {
   box-shadow: var(--shadow-md);
   border-color: var(--border-strong);
   transform: translateY(-1px);
+}
+
+/* Disable hover lift on touch devices to prevent sticky hover state */
+@media (hover: none) {
+  .assignment-card:hover {
+    transform: none;
+  }
 }
 
 .assignment-card.completed {
@@ -598,14 +828,15 @@ button:disabled {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .assignment-main-info {
   display: flex;
   align-items: flex-start;
-  gap: 0.85rem;
+  gap: 0.75rem;
   flex: 1;
+  min-width: 0; /* Allow text to shrink */
 }
 
 .custom-checkbox {
@@ -621,6 +852,8 @@ button:disabled {
   flex-shrink: 0;
   margin-top: 2px;
   transition: all var(--transition-fast);
+  /* Bigger tap target on touch */
+  touch-action: manipulation;
 }
 
 .custom-checkbox:hover {
@@ -636,45 +869,49 @@ button:disabled {
 .assignment-title-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.2rem;
 }
 
 .course-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.2rem 0.55rem;
+  padding: 0.2rem 0.5rem;
   border-radius: var(--radius-sm);
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .assignment-title {
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.015em;
+  word-break: break-word;
 }
 
 .assignment-desc {
   font-size: 0.85rem;
   color: var(--text-secondary);
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .urgency-pill {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
   border-radius: var(--radius-full);
-  font-size: 0.775rem;
+  font-size: 0.75rem;
   font-weight: 600;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .urgency-pill.urgent {
@@ -699,7 +936,7 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border-subtle);
   font-size: 0.8rem;
@@ -710,7 +947,7 @@ button:disabled {
 .meta-tags-group {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -723,7 +960,16 @@ button:disabled {
 .assignment-actions-group {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+/* On mobile, assignment action icons are slightly larger tap targets */
+@media (max-width: 640px) {
+  .assignment-actions-group .btn-icon {
+    width: 34px;
+    height: 34px;
+  }
 }
 
 /* Milestone Checklist Accordion */
@@ -853,6 +1099,7 @@ button:disabled {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
+  min-height: auto;
 }
 
 .ambient-btn.active {
@@ -905,6 +1152,17 @@ button:disabled {
   z-index: 100;
   padding: 1rem;
   animation: fadeIn 0.15s ease-out;
+  /* On mobile, push modal to top when keyboard opens */
+  align-items: flex-start;
+  padding-top: max(1rem, var(--safe-top));
+  overflow-y: auto;
+}
+
+@media (min-width: 641px) {
+  .modal-backdrop {
+    align-items: center;
+    padding-top: 1rem;
+  }
 }
 
 .modal-dialog {
@@ -913,16 +1171,30 @@ button:disabled {
   border-radius: var(--radius-lg);
   width: 100%;
   max-width: 640px;
-  max-height: 90vh;
+  max-height: calc(100dvh - 2rem);
   overflow-y: auto;
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   animation: scaleUp 0.15s ease-out;
+  margin: auto;
+}
+
+@media (max-width: 640px) {
+  .modal-dialog {
+    max-width: 100%;
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    margin: auto 0 0 0;
+  }
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
 }
 
 .modal-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -930,20 +1202,28 @@ button:disabled {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.1rem;
+}
+
+@media (max-width: 640px) {
+  .modal-body {
+    padding: 1rem;
+  }
 }
 
 .modal-footer {
-  padding: 1rem 1.5rem;
+  padding: 0.85rem 1.25rem;
   border-top: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
   background: var(--bg-subtle);
+  /* Respect safe area at bottom */
+  padding-bottom: calc(0.85rem + var(--safe-bottom));
 }
 
 /* Forms */
@@ -967,12 +1247,20 @@ button:disabled {
   font-size: 0.875rem;
   color: var(--text-primary);
   transition: all var(--transition-fast);
+  width: 100%;
 }
 
 .form-input:focus, .form-textarea:focus, .form-select:focus {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--accent-primary-subtle);
+}
+
+/* Prevent zoom on focus in iOS (16px minimum) */
+@media (max-width: 768px) {
+  .form-input, .form-textarea, .form-select {
+    font-size: 16px;
+  }
 }
 
 .form-grid-2 {
@@ -1025,8 +1313,24 @@ button:disabled {
   animation: slideLeft 0.25s ease-out;
 }
 
+/* On mobile, drawer takes full width */
+@media (max-width: 640px) {
+  .tutor-drawer {
+    max-width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    height: 92vh;
+    margin-top: auto;
+  }
+  .tutor-drawer-backdrop {
+    align-items: flex-end;
+    justify-content: center;
+  }
+}
+
 .tutor-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.25rem;
   border-bottom: 1px solid var(--border-subtle);
   display: flex;
   align-items: center;
@@ -1035,8 +1339,8 @@ button:disabled {
 }
 
 .tutor-context-card {
-  margin: 1rem 1.25rem 0.5rem 1.25rem;
-  padding: 0.85rem 1rem;
+  margin: 0.85rem 1rem 0.5rem 1rem;
+  padding: 0.75rem 0.9rem;
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
@@ -1048,7 +1352,7 @@ button:disabled {
 .tutor-chat-history {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 1.25rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -1081,8 +1385,13 @@ button:disabled {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem 1rem;
   border-top: 1px solid var(--border-subtle);
+  scrollbar-width: none;
+}
+
+.tutor-quick-prompts::-webkit-scrollbar {
+  display: none;
 }
 
 .quick-prompt-chip {
@@ -1094,6 +1403,7 @@ button:disabled {
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+  min-height: auto;
 }
 
 .quick-prompt-chip:hover {
@@ -1103,7 +1413,8 @@ button:disabled {
 }
 
 .tutor-input-bar {
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1rem;
+  padding-bottom: calc(0.85rem + var(--safe-bottom));
   border-top: 1px solid var(--border-subtle);
   display: flex;
   gap: 0.5rem;
@@ -1118,8 +1429,9 @@ button:disabled {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1.25rem;
   box-shadow: var(--shadow-sm);
+  overflow-x: auto; /* allow horizontal scroll on very small screens */
 }
 
 .calendar-header {
@@ -1127,33 +1439,46 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1.25rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
+  gap: 0.35rem;
+  min-width: 420px; /* prevent cells from becoming unreadably thin */
 }
 
 .calendar-day-label {
   text-align: center;
-  font-size: 0.775rem;
+  font-size: 0.725rem;
   font-weight: 700;
   color: var(--text-muted);
-  padding-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
   text-transform: uppercase;
 }
 
 .calendar-cell {
-  min-height: 100px;
+  min-height: 80px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  padding: 0.5rem;
+  padding: 0.4rem;
   background: var(--bg-subtle);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.25rem;
   transition: all var(--transition-fast);
+}
+
+@media (max-width: 480px) {
+  .calendar-cell {
+    min-height: 60px;
+    padding: 0.3rem;
+  }
+  .calendar-container {
+    padding: 0.85rem;
+  }
 }
 
 .calendar-cell.current-month {
@@ -1166,15 +1491,15 @@ button:disabled {
 }
 
 .calendar-cell-date {
-  font-size: 0.775rem;
+  font-size: 0.725rem;
   font-weight: 700;
   color: var(--text-secondary);
 }
 
 .calendar-chip {
-  padding: 0.2rem 0.4rem;
+  padding: 0.18rem 0.35rem;
   border-radius: 4px;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: white;
   white-space: nowrap;
@@ -1184,36 +1509,105 @@ button:disabled {
 }
 
 /* ==========================================================================
+   Profile / Mastery View
+   ========================================================================== */
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
    Toast System
    ========================================================================== */
 
 .toast-container {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 5rem; /* sit above the mobile nav bar */
+  right: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   z-index: 200;
   pointer-events: none;
+  max-width: calc(100vw - 2rem);
+}
+
+@media (min-width: 769px) {
+  .toast-container {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
 }
 
 .toast-item {
   pointer-events: auto;
   background: var(--text-primary);
   color: var(--bg-surface);
-  padding: 0.75rem 1.15rem;
+  padding: 0.75rem 1.1rem;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   box-shadow: var(--shadow-lg);
   display: flex;
   align-items: center;
   gap: 0.6rem;
   animation: slideUp 0.2s ease-out;
+  word-break: break-word;
 }
 
-/* Animations */
+/* ==========================================================================
+   Daily Scheduler / Schedule View
+   ========================================================================== */
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Utility: Responsive helpers
+   ========================================================================== */
+
+/* Show only on mobile */
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: flex;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* Prevent long text from breaking layouts */
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -1232,4 +1626,22 @@ button:disabled {
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUpFull {
+  from { opacity: 0; transform: translateY(100%); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  @keyframes scaleUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Pulse for loading mascot */
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(0.97); }
 }

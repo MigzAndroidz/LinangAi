@@ -98,9 +98,19 @@ export function App() {
         const allProfiles = await StorageService.getProfiles();
         setProfiles(allProfiles);
 
+        // Empty database — first-time user. Show onboarding modal immediately.
+        if (allProfiles.length === 0) {
+          setProfileToEdit(null);
+          setIsAccountModalOpen(true);
+          setIsInitialized(true);
+          return;
+        }
+
         const activeId = StorageService.getCurrentProfileId();
-        const validId = allProfiles.some((p) => p.id === activeId) ? activeId : (allProfiles[0]?.id || 'prof-1');
-        
+        const validId = allProfiles.some((p) => p.id === activeId)
+          ? activeId
+          : allProfiles[0].id;
+
         setCurrentProfileId(validId);
         StorageService.setCurrentProfileId(validId);
 
@@ -128,8 +138,10 @@ export function App() {
     await StorageService.saveSettings(updated, currentProfileId);
   };
 
-  // Start background reminder worker
+  // Start background reminder worker — restarts whenever the active profile changes
   useEffect(() => {
+    if (!currentProfileId) return;
+
     const unsubscribe = notificationService.subscribe((event) => {
       addToast({
         title: event.title,
@@ -139,17 +151,21 @@ export function App() {
       });
     });
 
-    notificationService.startPeriodicCheck(async (updatedAssignments) => {
-      if (updatedAssignments) {
-        setAssignments(updatedAssignments);
-      }
-    }, 30000);
+    notificationService.startPeriodicCheck(
+      currentProfileId,
+      async (updatedAssignments) => {
+        if (updatedAssignments) {
+          setAssignments(updatedAssignments);
+        }
+      },
+      30000
+    );
 
     return () => {
       unsubscribe();
       notificationService.stopPeriodicCheck();
     };
-  }, [addToast]);
+  }, [addToast, currentProfileId]);
 
   const handleRequestNotifPermission = async () => {
     const res = await notificationService.requestPermission();
@@ -198,6 +214,8 @@ export function App() {
       addToast({ title: 'Account Created', message: `Welcome to Linang AI, ${created.name}! Your workspace is ready.`, type: 'success' });
     }
     setProfileToEdit(null);
+    // Always close the modal after saving (covers the onboarding case too)
+    setIsAccountModalOpen(false);
   };
 
   // XP progression helper
@@ -355,29 +373,36 @@ export function App() {
     );
   }
 
+  // Compute onboarding flag — true when there are no profiles yet
+  const isOnboarding = profiles.length === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      {/* Header with Mascot & Profile Switcher */}
-      <Header
-        currentProfile={currentProfile}
-        profiles={profiles}
-        onSwitchProfile={handleSwitchProfile}
-        onOpenCreateAccount={() => { setProfileToEdit(null); setIsAccountModalOpen(true); }}
-        userStats={userStats}
-        notificationPermission={notifPermission}
-        onRequestNotificationPermission={handleRequestNotifPermission}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        activeView={activeView}
-        onViewChange={setActiveView}
-        onOpenAddModal={() => { setEditingAssignment(null); setIsAddModalOpen(true); }}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenAnalytics={() => setIsAnalyticsOpen(true)}
-        onOpenCourses={() => setIsCoursesOpen(true)}
-      />
+      {/* Only render the full app shell once a real profile exists */}
+      {!isOnboarding && currentProfile && (
+        <>
+          <Header
+            currentProfile={currentProfile}
+            profiles={profiles}
+            onSwitchProfile={handleSwitchProfile}
+            onOpenCreateAccount={() => { setProfileToEdit(null); setIsAccountModalOpen(true); }}
+            userStats={userStats}
+            notificationPermission={notifPermission}
+            onRequestNotificationPermission={handleRequestNotifPermission}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            activeView={activeView}
+            onViewChange={setActiveView}
+            onOpenAddModal={() => { setEditingAssignment(null); setIsAddModalOpen(true); }}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+            onOpenAnalytics={() => setIsAnalyticsOpen(true)}
+            onOpenCourses={() => setIsCoursesOpen(true)}
+          />
+        </>
+      )}
 
-      {/* Main Container */}
-      <main className="app-container">
+      {/* Main Container — hidden during onboarding */}
+      {!isOnboarding && currentProfile && <main className="app-container">
         {/* Daily AI Briefing Banner */}
         {activeView !== 'profile' && (
           <DailyBriefingBanner
@@ -462,7 +487,7 @@ export function App() {
             onOpenAddModal={() => { setEditingAssignment(null); setIsAddModalOpen(true); }}
           />
         )}
-      </main>
+      </main>}
 
       {/* Floating In-App Notifications Container */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
@@ -478,9 +503,15 @@ export function App() {
 
       <AccountModal
         isOpen={isAccountModalOpen}
-        onClose={() => { setIsAccountModalOpen(false); setProfileToEdit(null); }}
+        onClose={() => {
+          // Cannot dismiss the modal during onboarding — a profile must be created
+          if (isOnboarding) return;
+          setIsAccountModalOpen(false);
+          setProfileToEdit(null);
+        }}
         onSave={handleSaveProfile}
         profileToEdit={profileToEdit}
+        isOnboarding={isOnboarding}
       />
 
       <AITutorDrawer

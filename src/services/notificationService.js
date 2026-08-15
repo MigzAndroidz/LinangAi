@@ -58,14 +58,14 @@ class NotificationService {
   }
 
   // Check assignments against reminder thresholds
-  checkReminders(onAssignmentUpdate) {
-    const settings = StorageService.getSettings();
+  async checkReminders(profileId, onAssignmentUpdate) {
+    const settings = await StorageService.getSettings(profileId);
     if (!settings.enableDesktopNotifications && !settings.enableAudioChimes) {
       return;
     }
 
-    const assignments = StorageService.getAssignments();
-    const courses = StorageService.getCourses();
+    const assignments = await StorageService.getAssignments(profileId);
+    const courses = await StorageService.getCourses(profileId);
     const courseMap = Object.fromEntries(courses.map((c) => [c.id, c]));
 
     const now = Date.now();
@@ -106,8 +106,8 @@ class NotificationService {
             try {
               new Notification(`⏰ [${course.code}] ${hw.title}`, {
                 body: alertMsg,
-                icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232563eb"><circle cx="12" cy="12" r="10"/></svg>',
-                tag: `studymind-${hw.id}-${offset}`,
+                icon: '/mascot.png',
+                tag: `linang-${hw.id}-${offset}`,
                 requireInteraction: diffMinutes <= 30
               });
             } catch (e) {
@@ -135,7 +135,7 @@ class NotificationService {
     });
 
     if (hasUpdates) {
-      StorageService.saveAssignments(updatedAssignments);
+      await StorageService.saveAssignments(updatedAssignments, profileId);
       if (onAssignmentUpdate) {
         onAssignmentUpdate(updatedAssignments);
       }
@@ -143,13 +143,13 @@ class NotificationService {
   }
 
   // Start background periodic checker
-  startPeriodicCheck(onAssignmentUpdate, intervalMs = 45000) {
+  startPeriodicCheck(profileId, onAssignmentUpdate, intervalMs = 45000) {
     this.stopPeriodicCheck();
     // Run immediate check
-    this.checkReminders(onAssignmentUpdate);
+    this.checkReminders(profileId, onAssignmentUpdate);
     // Setup interval
     this.intervalId = setInterval(() => {
-      this.checkReminders(onAssignmentUpdate);
+      this.checkReminders(profileId, onAssignmentUpdate);
     }, intervalMs);
   }
 
@@ -161,8 +161,8 @@ class NotificationService {
   }
 
   // Trigger a test alert to verify notification & sound setup
-  testAlert() {
-    const settings = StorageService.getSettings();
+  async testAlert(profileId) {
+    const settings = await StorageService.getSettings(profileId);
     if (settings.enableAudioChimes) {
       audioService.playReminderSound(settings.alertTone || 'chime');
     }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, User, Sparkles, GraduationCap, Target, Heart, Check } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 
 export const AccountModal = ({
   isOpen,
   onClose,
   onSave,
-  profileToEdit = null
+  profileToEdit = null,
+  isOnboarding = false    // true on first-run: hides X/Cancel, shows welcome copy
 }) => {
   const [name, setName] = useState('');
   const [handle, setHandle] = useState('');
@@ -35,13 +36,22 @@ export const AccountModal = ({
       setAvatar('🦉');
       setColor('#2563eb');
       setYear('Freshman');
-      setMajor('Computer Science');
-      setTargetGoal('3.8+ GPA • Dean\'s List');
-      setBio('Organizing my academic journey with Linang AI.');
+      setMajor('');
+      setTargetGoal('');
+      setBio('');
     }
   }, [profileToEdit, isOpen]);
 
   if (!isOpen) return null;
+
+  // During onboarding the modal must not be dismissable
+  const handleBackdropClick = () => {
+    if (!isOnboarding) onClose();
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && !isOnboarding) onClose();
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -58,35 +68,68 @@ export const AccountModal = ({
       targetGoal: targetGoal.trim() || 'Academic Excellence',
       bio: bio.trim()
     });
-    onClose();
+
+    // Only call onClose for non-onboarding edits; onboarding is handled by App
+    if (!isOnboarding) onClose();
   };
 
+  // ---- Onboarding header copy vs. normal edit/create copy ----
+  const headerTitle = isOnboarding
+    ? 'Welcome to Linang AI 🦉'
+    : profileToEdit
+    ? 'Edit Student Profile'
+    : 'Create New Student Account';
+
+  const headerSubtitle = isOnboarding
+    ? 'Create your profile to get started — your data stays 100% local on your device.'
+    : null;
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="modal-backdrop"
+      onClick={handleBackdropClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
+      <div
+        className="modal-dialog"
+        onClick={(e) => e.stopPropagation()}
+        style={isOnboarding ? { maxWidth: '520px' } : undefined}
+      >
         {/* Header */}
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div
-              style={{
-                width: '34px',
-                height: '34px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: color,
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.2rem'
-              }}
-            >
-              {avatar}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: color,
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '1.2rem'
+                }}
+              >
+                {avatar}
+              </div>
+              <h3 style={{ margin: 0 }}>{headerTitle}</h3>
             </div>
-            <h3>{profileToEdit ? 'Edit Student Profile' : 'Create New Student Account'}</h3>
+            {headerSubtitle && (
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', paddingLeft: '0.25rem' }}>
+                {headerSubtitle}
+              </p>
+            )}
           </div>
-          <button onClick={onClose} className="btn btn-icon" style={{ width: '32px', height: '32px' }}>
-            <X size={16} />
-          </button>
+
+          {/* X button is hidden during onboarding */}
+          {!isOnboarding && (
+            <button onClick={onClose} className="btn btn-icon" style={{ width: '32px', height: '32px' }}>
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         {/* Form Body */}
@@ -153,9 +196,10 @@ export const AccountModal = ({
                 type="text"
                 required
                 className="form-input"
-                placeholder="e.g. Alex Rivera"
+                placeholder="e.g. Maria Santos"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                autoFocus={isOnboarding}
               />
             </div>
 
@@ -222,13 +266,15 @@ export const AccountModal = ({
           </div>
         </form>
 
-        {/* Footer */}
+        {/* Footer — Cancel hidden during onboarding */}
         <div className="modal-footer">
-          <button type="button" onClick={onClose} className="btn btn-subtle">
-            Cancel
-          </button>
+          {!isOnboarding && (
+            <button type="button" onClick={onClose} className="btn btn-subtle">
+              Cancel
+            </button>
+          )}
           <button type="submit" form="profile-form" className="btn btn-primary">
-            {profileToEdit ? 'Save Changes' : 'Create Account'}
+            {isOnboarding ? 'Get Started 🚀' : profileToEdit ? 'Save Changes' : 'Create Account'}
           </button>
         </div>
       </div>

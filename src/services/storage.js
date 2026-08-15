@@ -11,9 +11,59 @@ import {
 
 const CURRENT_PROFILE_KEY = 'linang_active_profile_id_v2';
 
+// Known identifiers for the old hardcoded demo seed profiles.
+// We use both id AND handle so we never accidentally delete a real user
+// who happened to pick the same id format.
+const DEMO_PROFILES_TO_PURGE = [
+  { id: 'prof-1', handle: '@arivera_cs' },
+  { id: 'prof-2', handle: '@elena_bio' }
+];
+const MIGRATION_FLAG = 'linang_demo_migration_v1_done';
+
+async function purgeDemoProfile(id) {
+  await db.profiles.delete(id);
+  await db.courses.where('profileId').equals(id).delete();
+  await db.assignments.where('profileId').equals(id).delete();
+  await db.userStats.delete(id);
+  await db.userSettings.delete(id);
+}
+
+async function runDemoMigration() {
+  // Only run once per browser session
+  if (localStorage.getItem(MIGRATION_FLAG)) return;
+
+  let purged = 0;
+  for (const { id, handle } of DEMO_PROFILES_TO_PURGE) {
+    try {
+      const existing = await db.profiles.get(id);
+      // Guard: only delete if it really is the known demo profile
+      if (existing && existing.handle === handle) {
+        await purgeDemoProfile(id);
+        purged++;
+        console.info(`[Linang AI] Removed stale demo profile: ${existing.name} (${id})`);
+      }
+    } catch (e) {
+      console.warn(`[Linang AI] Migration: could not check/purge ${id}:`, e);
+    }
+  }
+
+  // Clear the stale active-profile pointer if it pointed at a purged profile
+  if (purged > 0) {
+    const activeId = localStorage.getItem(CURRENT_PROFILE_KEY);
+    if (DEMO_PROFILES_TO_PURGE.some((p) => p.id === activeId)) {
+      localStorage.removeItem(CURRENT_PROFILE_KEY);
+    }
+  }
+
+  localStorage.setItem(MIGRATION_FLAG, '1');
+}
+
 export const StorageService = {
   init: async () => {
     try {
+      // Step 1: Run the one-time migration to remove stale demo profiles
+      await runDemoMigration();
+      // Step 2: Initialise the DB schema (seeds demo data only in dev + flag)
       await initDatabase();
     } catch (e) {
       console.warn('StorageService.init non-fatal warning:', e);
@@ -26,21 +76,19 @@ export const StorageService = {
   getProfiles: async () => {
     try {
       const list = await db.profiles.toArray();
-      if (list && list.length > 0) return list;
-      await initDatabase();
-      const retryList = await db.profiles.toArray();
-      return retryList.length > 0 ? retryList : INITIAL_PROFILES;
+      // Return whatever is in the DB — including an empty array.
+      // The onboarding flow in App.jsx handles the empty-array case.
+      return list || [];
     } catch {
-      return INITIAL_PROFILES;
+      return [];
     }
   },
 
   getCurrentProfileId: () => {
     try {
-      const current = localStorage.getItem(CURRENT_PROFILE_KEY);
-      return current || INITIAL_PROFILES[0].id;
+      return localStorage.getItem(CURRENT_PROFILE_KEY) || null;
     } catch {
-      return INITIAL_PROFILES[0].id;
+      return null;
     }
   },
 

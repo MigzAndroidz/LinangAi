@@ -104,21 +104,29 @@ export class LinangDexieDB extends Dexie {
 
 export const db = new LinangDexieDB();
 
-// --- Seed Default Profiles & Initial Profile-Scoped Data with Idempotent bulkPut ---
+// ---------------------------------------------------------------------------
+// Seed demo data ONLY in local dev when VITE_SEED_DEMO_DATA=true.
+// In production (Vercel) an empty DB is intentional — the onboarding modal
+// guides the real user to create their first profile.
+// ---------------------------------------------------------------------------
 export async function initDatabase() {
   try {
     const profileCount = await db.profiles.count();
-    if (profileCount === 0) {
-      // 1. Add Default Profiles (bulkPut avoids KeyAlreadyExistsError)
+
+    const shouldSeedDemo =
+      import.meta.env.DEV && import.meta.env.VITE_SEED_DEMO_DATA === 'true';
+
+    if (profileCount === 0 && shouldSeedDemo) {
+      // 1. Profiles
       await db.profiles.bulkPut(INITIAL_PROFILES);
 
-      // 2. Add Courses for Profile 1 (Alex Rivera)
+      // 2. Courses — Alex Rivera (Profile 1)
       const alexCourses: Course[] = INITIAL_COURSES.map((c) => ({
         ...c,
         profileId: INITIAL_PROFILES[0].id
       }));
 
-      // 3. Add Courses for Profile 2 (Elena Rostova - Pre-Med / Bio)
+      // 3. Courses — Elena Rostova (Profile 2, Pre-Med / Bio)
       const elenaCourses: Course[] = [
         {
           id: 'elena-c1',
@@ -151,14 +159,14 @@ export async function initDatabase() {
 
       await db.courses.bulkPut([...alexCourses, ...elenaCourses]);
 
-      // 4. Add Assignments for Profile 1 (Alex Rivera)
+      // 4. Assignments — Alex Rivera
       const alexAssignments: Assignment[] = INITIAL_ASSIGNMENTS.map((hw) => ({
         ...hw,
         profileId: INITIAL_PROFILES[0].id,
         createdAt: new Date().toISOString()
       }));
 
-      // 5. Add Assignments for Profile 2 (Elena Rostova)
+      // 5. Assignments — Elena Rostova
       const now = Date.now();
       const elenaAssignments: Assignment[] = [
         {
@@ -215,7 +223,7 @@ export async function initDatabase() {
 
       await db.assignments.bulkPut([...alexAssignments, ...elenaAssignments]);
 
-      // 6. Add User Stats for each profile
+      // 6. User Stats
       await db.userStats.bulkPut([
         {
           profileId: INITIAL_PROFILES[0].id,
@@ -239,12 +247,9 @@ export async function initDatabase() {
         }
       ]);
 
-      // 7. Add Settings for each profile
+      // 7. Settings
       await db.userSettings.bulkPut([
-        {
-          profileId: INITIAL_PROFILES[0].id,
-          ...INITIAL_SETTINGS
-        },
+        { profileId: INITIAL_PROFILES[0].id, ...INITIAL_SETTINGS },
         {
           profileId: INITIAL_PROFILES[1].id,
           ...INITIAL_SETTINGS,
